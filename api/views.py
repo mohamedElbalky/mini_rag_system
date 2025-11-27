@@ -8,6 +8,8 @@ from utils.helpers import create_response
 
 from .serializers import UserRegistrationSerializer, UserSerializer, DocumentSerializer, DocumentUploadSerializer
 from .models import Document
+from .utils.pdf_processor import PDFProcessor
+from .utils.vector_store import VectorStoreManager
 
 
 
@@ -156,6 +158,99 @@ def delete_document(request, document_id):
         return create_response(
             success=False,
             message='Failed to delete document',
+            errors=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_document(request):
+    """
+    Upload a document
+
+    This endpoint accepts a file upload and processes the uploaded
+    PDF to extract text and create a vector store.
+
+    The response will contain the processed document data.
+
+    :param request: Request object
+    :return: Response object
+    :raises: Exception
+    """
+    try:
+        if 'file' not in request.FILES:
+            return create_response(
+                success=False,
+                message='No file provided',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = DocumentUploadSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return create_response(
+                success=False,
+                message='Invalid file upload',
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        file = request.FILES['file']
+        
+        # Create document record
+        document = Document.objects.create(
+            user=request.user,
+            title=file.name,
+            file=file
+        )
+
+        # Process PDF
+        try:
+            # Extract text from PDF
+            pdf_processor = PDFProcessor()
+            text_chunks = pdf_processor.process_pdf(document.file.path)
+            
+            if not text_chunks:
+                document.delete()
+                return create_response(
+                    success=False,
+                    message='Failed to extract text from PDF',
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Create vector store
+            vector_store_manager = VectorStoreManager()
+            vector_store_path = vector_store_manager.create_vector_store(
+                text_chunks,
+                document.id
+            )
+
+            # Update document
+            document.processed = True
+            document.vector_store_path = vector_store_path
+            document.text_chunks_count = len(text_chunks)
+            document.save()
+
+            return create_response(
+                success=True,
+                message='Document uploaded and processed successfully',
+                data=DocumentSerializer(document).data,
+                status_code=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            document.delete()
+            return create_response(
+                success=False,
+                message='Failed to process document',
+                errors=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    except Exception as e:
+        return create_response(
+            success=False,
+            message='An error occurred during document upload',
             errors=str(e),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

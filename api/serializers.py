@@ -32,3 +32,20 @@ class DocumentSerializer(serializers.ModelSerializer):
         model = Document
         fields = ('id', 'title', 'file', 'uploaded_at', 'processed', 'text_chunks_count')
         read_only_fields = ('uploaded_at', 'processed', 'text_chunks_count')
+
+class DocumentUploadSerializer(serializers.ModelSerializer):
+    file = serializers.FileField()
+
+    class Meta:
+        model = Document
+        fields = ('file',)
+
+    def validate_file(self, value):
+        if not value.name.endswith('.pdf'):
+            raise serializers.ValidationError("Only PDF files are allowed.")
+        
+        # Check file size (10MB limit)
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("File size must be less than 10MB.")
+        
+        return value
