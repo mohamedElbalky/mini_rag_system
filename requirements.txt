@@ -1,7 +1,17 @@
 Django==5.2.7
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
-python-dotenv==1.2.1
 
 channels==4.3.2
 daphne==4.1.0
+
+PyPDF2==3.0.1
+pdfplumber==0.11.4
+
+faiss-cpu==1.11.0.post1
+sentence-transformers==3.3.1
+
+openai==2.8.1
+
+python-dotenv==1.0.1
+numpy==2.2.0
