@@ -4,113 +4,91 @@ import numpy as np
 import faiss
 from typing import List
 from django.conf import settings
-
+from google import genai
 
 class VectorStoreManager:
     """
-    Manage FAISS vector store for document embeddings
+    Manage vector store creation and similarity search using FAISS and google-genai embeddings
     """
     
     def __init__(self):
         self.vector_store_dir = os.path.join(settings.MEDIA_ROOT, 'vector_stores')
         os.makedirs(self.vector_store_dir, exist_ok=True)
+        self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        self.embedding_model = "text-embedding-004"
 
     def create_vector_store(self, text_chunks: List[str], document_id: int) -> str:
         """
-        Create a FAISS vector store from text chunks
+        Create a vector store for the given text chunks and document ID.
+
+        :param text_chunks: List of text chunks to embed
+        :param document_id: Document ID to associate with the vector store
+        :return: Path to the created vector store index file
         """
+        if not text_chunks: return ""
         try:
-            # Create embeddings (using simple TF-IDF-like approach for demo)
-            # In production, use proper embeddings (OpenAI, SentenceTransformers, etc.)
-            embeddings = self._create_embeddings(text_chunks)
-            
-            # Create FAISS index
+            embeddings = self._create_embeddings(text_chunks, is_query=False)
             dimension = embeddings.shape[1]
             index = faiss.IndexFlatL2(dimension)
             index.add(embeddings)
 
-            # Save vector store
-            doc_vector_dir = os.path.join(self.vector_store_dir, str(document_id))
-            os.makedirs(doc_vector_dir, exist_ok=True)
-
-            index_path = os.path.join(doc_vector_dir, 'index.faiss')
-            chunks_path = os.path.join(doc_vector_dir, 'chunks.pkl')
-
-            faiss.write_index(index, index_path)
+            doc_dir = os.path.join(self.vector_store_dir, str(document_id))
+            os.makedirs(doc_dir, exist_ok=True)
             
-            with open(chunks_path, 'wb') as f:
+            index_path = os.path.join(doc_dir, 'index.faiss')
+            with open(os.path.join(doc_dir, 'chunks.pkl'), 'wb') as f:
                 pickle.dump(text_chunks, f)
-
+                
+            faiss.write_index(index, index_path)
             return index_path
-
         except Exception as e:
-            print(f"Error creating vector store: {str(e)}")
+            print(f"Error creating vector store: {e}")
             raise
 
     def search_similar(self, index_path: str, query: str, k: int = 3) -> List[str]:
         """
-        Search for similar chunks in the vector store
+        Search for similar text chunks in the vector store.
+
+        :param index_path: Path to the faiss index file
+        :param query: Query string
+        :param k: Number of nearest neighbors to retrieve (default=3)
+        :return: List of similar text chunks
         """
         try:
-            # Load index and chunks
+            doc_dir = os.path.dirname(index_path)
             index = faiss.read_index(index_path)
-            
-            chunks_path = index_path.replace('index.faiss', 'chunks.pkl')
-            with open(chunks_path, 'rb') as f:
+            with open(os.path.join(doc_dir, 'chunks.pkl'), 'rb') as f:
                 chunks = pickle.load(f)
-
-            # Create query embedding
-            query_embedding = self._create
-
-            # Search
-            distances, indices = index.search(query_embedding, k)
-
-            # Return top k chunks
-            similar_chunks = [chunks[idx] for idx in indices[0] if idx < len(chunks)]
             
-            return similar_chunks
-
+            query_emb = self._create_embeddings([query], is_query=True)
+            distances, indices = index.search(query_emb, k)
+            return [chunks[i] for i in indices[0] if i < len(chunks)]
         except Exception as e:
-            print(f"Error searching vector store: {str(e)}")
+            print(f"Search error: {e}")
             return []
 
-    def _create_embeddings(self, texts: List[str]) -> np.ndarray:
+    def _create_embeddings(self, texts: List[str], is_query: bool) -> np.ndarray:
         """
-        Create simple embeddings (TF-IDF-like)
-        For production, use OpenAI embeddings or SentenceTransformers
+        Create embeddings for a list of texts using the GemAI text-embedding-004 model
+        
+        Parameters:
+        texts (List[str]): List of texts to embed
+        is_query (bool): If True, use the RETRIEVAL_QUERY task type. Otherwise, use RETRIEVAL_DOCUMENT
+        
+        Returns:
+        np.ndarray: A 2D numpy array of shape (len(texts), embedding_dim) containing the embeddings for each text
         """
-        # This is a simplified version for demo purposes
-        # In production, use proper embeddings like:
-        # - OpenAI: openai.Embedding.create()
-        # - SentenceTransformers: model.encode()
-        
-        from collections import Counter
-        
-        # Create vocabulary
-        all_words = []
-        for text in texts:
-            words = text.lower().split()
-            all_words.extend(words)
-        
-        vocab = list(set(all_words))
-        vocab_size = min(len(vocab), 384)  # Limit vocabulary size
-        vocab = vocab[:vocab_size]
-        word_to_idx = {word: idx for idx, word in enumerate(vocab)}
-        
-        # Create embeddings
-        embeddings = np.zeros((len(texts), vocab_size))
-        
-        for i, text in enumerate(texts):
-            words = text.lower().split()
-            word_counts = Counter(words)
-            
-            for word, count in word_counts.items():
-                if word in word_to_idx:
-                    embeddings[i, word_to_idx[word]] = count
-        
-        # Normalize
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        norms[norms == 0] = 1
-        embeddings = embeddings / norms
-        
-        return embeddings.astype('float32')
+        try:
+            task = "RETRIEVAL_QUERY" if is_query else "RETRIEVAL_DOCUMENT"
+            result = self.client.models.embed_content(
+                model=self.embedding_model,
+                contents=texts,
+                config={'task_type': task}
+            )
+            # Extract .values from the list of embedding objects
+            if hasattr(result, 'embeddings'):
+                return np.array([e.values for e in result.embeddings]).astype('float32')
+            return np.array([])
+        except Exception as e:
+            print(f"Embedding error: {e}")
+            return np.array([])
