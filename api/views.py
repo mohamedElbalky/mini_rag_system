@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+import logging
 
 from utils.helpers import create_response
 
@@ -11,7 +12,7 @@ from .models import Document
 from .utils.pdf_processor import PDFProcessor
 from .utils.vector_store import VectorStoreManager
 
-
+logger = logging.getLogger(__name__)
 
 # Authentication Views
 @api_view(['POST'])
@@ -47,6 +48,7 @@ def register(request):
         )
     
     except Exception as e:
+        logger.error(f"An error occurred during registration: {str(e)}")
         return create_response(
             success=False,
             message='An error occurred during registration',
@@ -96,6 +98,7 @@ def login(request):
         )
     
     except Exception as e:
+        logger.error(f"An error occurred during login: {str(e)}")
         return create_response(
             success=False,
             message='An error occurred during login',
@@ -123,6 +126,7 @@ def list_documents(request):
         )
     
     except Exception as e:
+        logger.error(f"Failed to retrieve documents: {str(e)}")
         return create_response(
             success=False,
             message='Failed to retrieve documents',
@@ -140,7 +144,7 @@ def delete_document(request, document_id):
         document = Document.objects.get(id=document_id, user=request.user)
         document.delete()
         
-        
+        logger.info(f"Document deleted: ID {document_id} for user {request.user}")
         return create_response(
             success=True,
             message='Document deleted successfully',
@@ -148,6 +152,7 @@ def delete_document(request, document_id):
         )
     
     except Document.DoesNotExist:
+        logger.error(f"Document not found: ID {document_id} for user {request.user}")
         return create_response(
             success=False,
             message='Document not found',
@@ -155,6 +160,7 @@ def delete_document(request, document_id):
         )
     
     except Exception as e:
+        logger.error(f"Failed to delete document: {str(e)}")
         return create_response(
             success=False,
             message='Failed to delete document',
@@ -239,6 +245,7 @@ def upload_document(request):
             )
             
         except Exception as e:
+            logger.error(f"Failed to process document {document.id} for user {request.user}: {str(e)}")
             document.delete()
             return create_response(
                 success=False,
@@ -248,6 +255,7 @@ def upload_document(request):
             )
 
     except Exception as e:
+        logger.error(f"An error occurred during document upload: {str(e)}")
         return create_response(
             success=False,
             message='An error occurred during document upload',

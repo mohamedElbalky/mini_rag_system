@@ -2,6 +2,9 @@ from google import genai
 from typing import AsyncGenerator
 from django.conf import settings
 from google.genai.types import Content, Part
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LLMHandler:
@@ -49,7 +52,7 @@ class LLMHandler:
 
         except Exception as e:
             # Catching the base Exception for logging
-            print(f"Error streaming LLM response: {str(e)}")
+            logger.error(f"Error streaming LLM response: {str(e)}")
             yield f"Error: {str(e)}"
 
     def _prepare_contents(self, query: str, context: str = "") -> list[Content]:

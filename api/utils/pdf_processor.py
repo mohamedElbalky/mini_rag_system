@@ -1,6 +1,9 @@
 from PyPDF2 import PdfReader
 from typing import List
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class PDFProcessor:
     """
@@ -19,7 +22,7 @@ class PDFProcessor:
             reader = PdfReader(file_path)
             
             if len(reader.pages) == 0:
-                print("PDF has no pages")
+                logger.warning("PDF has no pages")
                 return []
 
             # Extract text from all pages
@@ -30,17 +33,17 @@ class PDFProcessor:
                     full_text += text + "\n"
 
             if not full_text.strip():
-                print("No text extracted from PDF")
+                logger.warning("No text extracted from PDF")
                 return []
 
             # Split into chunks
             chunks = self._split_text(full_text)
             
-            print(f"Extracted {len(chunks)} chunks from PDF")
+            logger.info(f"Extracted {len(chunks)} chunks from PDF")
             return chunks
 
         except Exception as e:
-            print(f"Error processing PDF: {str(e)}")
+            logger.error(f"Error processing PDF: {str(e)}")
             raise
 
     def _split_text(self, text: str) -> List[str]:
