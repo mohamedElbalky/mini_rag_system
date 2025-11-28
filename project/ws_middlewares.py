@@ -24,14 +24,15 @@ class WebSocketJWTAuthMiddleware(BaseMiddleware):
             scope['user'] = AnonymousUser()
         else:
             try:
-                scope['user'] = await self.get_user_from_token(token)
+                scope['user'] = await WebSocketJWTAuthMiddleware.get_user_from_token(token)
             except Exception as e:
                 scope['user'] = AnonymousUser()
 
         return await super().__call__(scope, receive, send)
 
+    @staticmethod
     @database_sync_to_async
-    def get_user_from_token(self, token_str):
+    def get_user_from_token(token_str):
         """
         Get user from token string. This now handles validation and user lookup.
         """
