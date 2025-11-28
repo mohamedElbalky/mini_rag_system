@@ -35,10 +35,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email')
 
 class DocumentSerializer(serializers.ModelSerializer):
+    file = serializers.FileField()
     class Meta:
         model = Document
-        fields = ('id', 'title', 'file', 'uploaded_at', 'processed', 'text_chunks_count')
-        read_only_fields = ('uploaded_at', 'processed', 'text_chunks_count')
+        fields = ('id', 'title', 'file', 'uploaded_at', 'processed')
+        read_only_fields = ('uploaded_at', 'processed')
+        
+    def get_file(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.file.url)
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
     file = serializers.FileField()

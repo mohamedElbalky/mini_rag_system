@@ -116,11 +116,11 @@ def list_documents(request):
     """
     try:
         documents = Document.objects.filter(user=request.user)
-        serializer = DocumentSerializer(documents, many=True)
+        serializer = DocumentSerializer(documents, many=True, context={'request': request})
         
         return create_response(
             success=True,
-            message='Documents retrieved successfully',
+            message=f'Documents retrieved successfully for user `{request.user.username}`',
             data=serializer.data,
             status_code=status.HTTP_200_OK
         )
@@ -144,7 +144,7 @@ def delete_document(request, document_id):
         document = Document.objects.get(id=document_id, user=request.user)
         document.delete()
         
-        logger.info(f"Document deleted: ID {document_id} for user {request.user}")
+        logger.info(f"Document deleted: ID {document_id} for user {request.user.username}")
         return create_response(
             success=True,
             message='Document deleted successfully',
@@ -152,7 +152,7 @@ def delete_document(request, document_id):
         )
     
     except Document.DoesNotExist:
-        logger.error(f"Document not found: ID {document_id} for user {request.user}")
+        logger.error(f"Document not found: ID {document_id} for user {request.user.username}")
         return create_response(
             success=False,
             message='Document not found',
@@ -240,12 +240,12 @@ def upload_document(request):
             return create_response(
                 success=True,
                 message='Document uploaded and processed successfully',
-                data=DocumentSerializer(document).data,
+                data=DocumentSerializer(document, context={'request': request}).data,
                 status_code=status.HTTP_201_CREATED
             )
             
         except Exception as e:
-            logger.error(f"Failed to process document {document.id} for user {request.user}: {str(e)}")
+            logger.error(f"Failed to process document {document.id} for user {request.user.username}: {str(e)}")
             document.delete()
             return create_response(
                 success=False,
@@ -255,7 +255,7 @@ def upload_document(request):
             )
 
     except Exception as e:
-        logger.error(f"An error occurred during document upload: {str(e)}")
+        logger.error(f"An error occurred during document upload for user {request.user.username}: {str(e)}")
         return create_response(
             success=False,
             message='An error occurred during document upload',
