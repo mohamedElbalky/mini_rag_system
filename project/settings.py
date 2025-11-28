@@ -170,9 +170,10 @@ CHANNEL_LAYERS = {
 
 # GemAI API Key
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+EMBEDDING_BATCH_SIZE = int(os.getenv('EMBEDDING_BATCH_SIZE', 100))
 
 # File Upload Settings
-MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2MB
 
 # Logging
 LOGGING = {

@@ -5,6 +5,10 @@ import faiss
 from typing import List
 from django.conf import settings
 from google import genai
+from google.genai.errors import APIError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VectorStoreManager:
     """
@@ -42,7 +46,7 @@ class VectorStoreManager:
             faiss.write_index(index, index_path)
             return index_path
         except Exception as e:
-            print(f"Error creating vector store: {e}")
+            logger.error(f"Error creating vector store: {e}")
             raise
 
     def search_similar(self, index_path: str, query: str, k: int = 3) -> List[str]:
@@ -64,7 +68,7 @@ class VectorStoreManager:
             distances, indices = index.search(query_emb, k)
             return [chunks[i] for i in indices[0] if i < len(chunks)]
         except Exception as e:
-            print(f"Search error: {e}")
+            logger.error(f"Search error: {e}")
             return []
 
     def _create_embeddings(self, texts: List[str], is_query: bool) -> np.ndarray:
@@ -78,17 +82,41 @@ class VectorStoreManager:
         Returns:
         np.ndarray: A 2D numpy array of shape (len(texts), embedding_dim) containing the embeddings for each text
         """
+        if not texts:
+            return np.array([])
+            
+        task_type = "RETRIEVAL_QUERY" if is_query else "RETRIEVAL_DOCUMENT"
+        embed_config = {'task_type': task_type}
+        
+        all_embeddings = []
+
         try:
-            task = "RETRIEVAL_QUERY" if is_query else "RETRIEVAL_DOCUMENT"
-            result = self.client.models.embed_content(
-                model=self.embedding_model,
-                contents=texts,
-                config={'task_type': task}
-            )
-            # Extract .values from the list of embedding objects
-            if hasattr(result, 'embeddings'):
-                return np.array([e.values for e in result.embeddings]).astype('float32')
+            for i in range(0, len(texts), settings.EMBEDDING_BATCH_SIZE):
+                batch_texts = texts[i:i + settings.EMBEDDING_BATCH_SIZE]
+                
+                # Send the batch to the API
+                result = self.client.models.embed_content(
+                    model=self.embedding_model,
+                    contents=batch_texts, 
+                    config=embed_config
+                )
+                
+                # Extract and combine embeddings from this batch
+                if hasattr(result, 'embeddings'):
+                    batch_vectors = [e.values for e in result.embeddings]
+                    all_embeddings.extend(batch_vectors)
+                else:
+                    # Should not happen if the call succeeded, but covers single-item edge case
+                    return np.array([]) 
+                    
+            # Combine all batch results into a single NumPy array
+            return np.array(all_embeddings).astype('float32')
+
+        except APIError as e:
+            # Log the specific API error message
+            logger.error(f"Gemini API Error (Code: {e.code}): {e.message}")
             return np.array([])
         except Exception as e:
-            print(f"Embedding error: {e}")
+            # Log the unexpected error (like the original tuple index out of range)
+            logger.error(f"Unknown Embedding Error: {e.__class__.__name__}: {str(e)}")
             return np.array([])
