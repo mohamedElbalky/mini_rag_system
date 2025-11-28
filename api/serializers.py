@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.conf import settings
 
 from .models import Document
 
@@ -44,8 +45,8 @@ class DocumentUploadSerializer(serializers.ModelSerializer):
         if not value.name.endswith('.pdf'):
             raise serializers.ValidationError("Only PDF files are allowed.")
         
-        # Check file size (10MB limit)
-        if value.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("File size must be less than 10MB.")
+        # Check file size
+        if value.size >= settings.MAX_UPLOAD_SIZE:
+            raise serializers.ValidationError(f"File size must be less than or equal to {settings.MAX_UPLOAD_SIZE / (1024 * 1024):.0f}MB.")
         
         return value
