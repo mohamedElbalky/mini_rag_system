@@ -16,8 +16,8 @@ class LLMHandler:
     def __init__(self):
         # Initialize the GenAI client using the API key from Django settings
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        self.model = "gemini-2.5-flash"
-        self.max_tokens = 1000
+        self.model = settings.GEMINI_MODEL
+        self.max_tokens = settings.GEMINI_MAX_TOKENS
         # Define the system instruction as a class attribute or constant
         self.system_instruction = (
             "You are a helpful assistant that answers questions based on the provided context. "
@@ -40,7 +40,6 @@ class LLMHandler:
                 config=genai.types.GenerateContentConfig(
                     max_output_tokens=self.max_tokens,
                     temperature=0.7,
-                    # ⭐ KEY CHANGE: Use the dedicated system_instruction parameter
                     system_instruction=self.system_instruction,
                 )
             )
@@ -61,7 +60,7 @@ class LLMHandler:
         This method now only prepares the user-facing prompt (query + context).
         """
         
-        # We no longer include the system instruction here
+        
         if context:
             # Combine the context and the user's question clearly
             user_prompt = f"Context:\n{context}\n\nQuestion: {query}"

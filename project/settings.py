@@ -83,6 +83,7 @@ ASGI_APPLICATION = 'project.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# TODO: Using SQLite for simplicity; switch to PostgreSQL or another DB in production
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -170,6 +171,8 @@ CHANNEL_LAYERS = {
 
 # GemAI API Key
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL')
+GEMINI_MAX_TOKENS = int(os.getenv('GEMINI_MAX_TOKENS', 1000))
 EMBEDDING_BATCH_SIZE = int(os.getenv('EMBEDDING_BATCH_SIZE', 100))
 
 # File Upload Settings
