@@ -18,8 +18,8 @@ class VectorStoreManager:
     def __init__(self):
         self.vector_store_dir = os.path.join(settings.MEDIA_ROOT, 'vector_stores')
         os.makedirs(self.vector_store_dir, exist_ok=True)
-        self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-        self.embedding_model = "text-embedding-004"
+        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self.embedding_model = settings.GEMINI_EMBEDDING_MODEL
 
     def create_vector_store(self, text_chunks: List[str], document_id: int) -> str:
         """
