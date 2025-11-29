@@ -2,7 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from ..models import Document
+
 from ..utils.vector_store import VectorStoreManager
 from ..utils.llm_handler import LLMHandler
 
@@ -137,6 +137,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """
         Get user's document
         """
+        from ..models import Document
         try:
             if document_id:
                 return Document.objects.filter(

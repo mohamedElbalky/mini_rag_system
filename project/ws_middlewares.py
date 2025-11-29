@@ -1,5 +1,5 @@
 from urllib.parse import parse_qs
-from django.contrib.auth.models import AnonymousUser
+
 from django.contrib.auth import get_user_model
 
 from channels.db import database_sync_to_async
@@ -16,6 +16,7 @@ class WebSocketJWTAuthMiddleware(BaseMiddleware):
     """
     
     async def __call__(self, scope, receive, send):
+        from django.contrib.auth.models import AnonymousUser
         query_string = scope.get('query_string', b'').decode()
         query_params = parse_qs(query_string)
         token = query_params.get('token', [None])[0]
@@ -36,6 +37,7 @@ class WebSocketJWTAuthMiddleware(BaseMiddleware):
         """
         Get user from token string. This now handles validation and user lookup.
         """
+        from django.contrib.auth.models import AnonymousUser
         try:
             access_token = AccessToken(token_str)
             user_id = access_token['user_id']
