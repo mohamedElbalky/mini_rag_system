@@ -105,7 +105,7 @@ The system is structured into several key components:
 
 This API provides endpoints for user registration and authentication using JWT (JSON Web Tokens).
 
-### 1. Register a New User (`/api/auth/register/`)
+### 1. Register a New User (`/api/v1/auth/register/`)
 -   **Method**: `POST`
 -   **Permissions**: `AllowAny`
 -   **Description**: Creates a new user account.
@@ -159,7 +159,7 @@ or
 }
 ```
 
-### 2. Login User (`/api/auth/login/`)
+### 2. Login User (`/api/v1/auth/login/`)
 -   **Method**: `POST`
 -   **Permissions**: `AllowAny`
 -   **Description**: Authenticates a user and provides JWT `access` and `refresh` tokens. The `access` token should be included in the `Authorization: Bearer <token>` header for subsequent authenticated requests.
