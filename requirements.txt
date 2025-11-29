@@ -17,3 +17,4 @@ google-genai==1.52.0
 python-dotenv==1.0.1
 numpy==2.2.0
 
+whitenoise==6.6.0
