@@ -1,0 +1,25 @@
+
+services:
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate &&
+              daphne -b 0.0.0.0 -p 8000 project.asgi:application"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    env_file:
+      - .env
+  redis:
+    image: "redis:7.2.4-alpine"
+    command: redis-server --port ${REDIS_PORT:-"6379"}
+    ports:
+      - ${REDIS_PORT:-"6379"}:${REDIS_PORT:-"6379"}
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
